@@ -1,0 +1,192 @@
+FORMAT: 1A
+HOST: https://api.lexffe.io
+
+# Backend API
+
+The set of API used for backend.lexffe.io
+
+# Group Posts
+
+Resources related to Blog Posts.
+
+## Post [/posts{?d}]
+
+### Get blog posts [GET]
+
+Gets all the blog posts. Limited to 10 posts per query.
+
+Successful Response is a JSON array of posts.
+Fails (only) when there is an error at server-side.
+
++ Parameters
+    + d: `0` (number, optional) - Pagination Delta
++ Response 200 (application/json)
+
+    + Schema
+
+            {
+                "$schema": "http://json-schema.org/draft/2019-09/schema#",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                    "tags": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                    },
+                    "subtitle": { "type": "string" },
+                    "markdown": { "type": "string" },
+                    "published": { "type": "boolean" }
+                    }
+                }
+            }
+
++ Response 500
+
+### Create new blog post [POST]
+
++ Request (application/json)
+
+        {
+        }
+
++ Response 201
++ Response 400
++ Response 401
++ Response 500
+
+## /blog/post/{id}
+
+### Get blog post [GET]
+
++ Parameters
+    + id: ffffff (string) - ID of the post
++ Response 200 (application/json)
++ Response 404
++ Response 500
+
+### Modify existing blog post [PUT]
+
++ Response 202
++ Response 400
++ Response 401
++ Response 500
+
+### Delete blog post [DELETE]
+
++ Response 202
++ Response 400
++ Response 401
++ Response 500
+
+# Group Projects
+
+## /project
+
+### Get all projects [GET]
+
++ Response 200 (application/json)
++ Response 500
+
+### Add project [POST]
+
++ Response 204
++ Response 400
++ Response 401
++ Response 500
+
+## /project/{id}
+
+### Modify project [PUT]
+
++ Response 204
++ Response 400
++ Response 401
++ Response 500
+
+### Delete project [DELETE]
+
++ Response 204
++ Response 400
++ Response 401
++ Response 500
+
+# Group Highlights
+
+Resources related to the blog highlights.
+
+Highlights can either be a blog entry, or a project.
+
+## Highlights [/highlights]
+
+### Get current highlights [GET]
+
++ Response 200 (application/json)
++ Response 500
+
+### Modify highlights [PUT]
+
+(Removes highlights as well)
+
++ Response 204
++ Response 500
+
+# Group Custom Pages
+
+## /custom-page
+
+### Get all custom pages [GET]
+
++ Response 200 (application/json)
++ Response 500
+
+### Create new blog post [POST]
+
++ Response 204
++ Response 400
++ Response 401
++ Response 500
+
+## /custom-page/{pagename}
+
++ Parameters
+    + pagename (string) - The custom page's name
+
+### Get single custom page [GET]
+
++ Response 200 (application/json)
+
+### Modify custom page [PUT]
+
++ Response 204
++ Response 400
++ Response 401
++ Response 500
+
+### Delete custom page [DELETE]
+
++ Response 204
++ Response 400
++ Response 401
++ Response 500
+
+## /cv
+
+### Get current CV [GET]
+
++ Response 200 (application/json)
++ Response 500
+
+### Modify CV [PUT]
+
++ Response 204
++ Response 400
++ Response 401
++ Response 500
+
+### Clear CV Page [DELETE]
+
++ Response 204
++ Response 400
++ Response 401
++ Response 500

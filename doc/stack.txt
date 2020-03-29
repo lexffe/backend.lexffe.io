@@ -1,0 +1,19 @@
+[database]
+
+candidates: mongodb, couchdb
+
+[rest-api]
+
+api.lexffe.io
+
+- Authentication
+- github.com/julienschmidt/httprouter
+
+[deployment]
+
+- FE: github pages
+
+BE candidates: heroku, zeit.co
+
+[DevOps]
+

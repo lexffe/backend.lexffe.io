@@ -1,0 +1,8 @@
+[mongo]
+addr = "mongodb://localhost:27017"
+database = "test"
+user = ""
+pass = ""
+
+[web]
+port = ":8080"

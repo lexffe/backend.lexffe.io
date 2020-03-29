@@ -1,0 +1,42 @@
+[public-access]
+
+base url: api.lexffe.io/v1
+
+- GET | POST | PUT | DELETE | PATCH?
+- pagination
+
+--- /blog/posts?d=10
+
+GET
+
+  params:
+    d:
+      description: pagination delta, multiplier of 10
+
+  return 200 Post[]
+    Array.length == 10
+  return 500
+
+/blog/post?id={single_post}
+
+GET
+
+--- /highlights
+
+GET
+  return 200 Highlights[]
+
+
+--- /custom-pages
+
+GET
+  return 200 Pages[]
+
+
+--- /projects
+
+--- /{custom-page-name}
+
+
+- /control
+(FE: Handoff to Control UI)
