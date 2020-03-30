@@ -9,19 +9,13 @@ The set of API used for backend.lexffe.io
 
 Resources related to Blog Posts.
 
-## Post [/posts{?d}]
+## Posts [/posts{?d}]
 
 ### Get blog posts [GET]
-
-Gets all the blog posts. Limited to 10 posts per query.
-
-Successful Response is a JSON array of posts.
-Fails (only) when there is an error at server-side.
 
 + Parameters
     + d: `0` (number, optional) - Pagination Delta
 + Response 200 (application/json)
-
     + Schema
 
             {
@@ -55,7 +49,7 @@ Fails (only) when there is an error at server-side.
 + Response 401
 + Response 500
 
-## /blog/post/{id}
+## Post [/blog/posts/{id}]
 
 ### Get blog post [GET]
 
@@ -81,7 +75,7 @@ Fails (only) when there is an error at server-side.
 
 # Group Projects
 
-## /project
+## /projects
 
 ### Get all projects [GET]
 
@@ -95,7 +89,7 @@ Fails (only) when there is an error at server-side.
 + Response 401
 + Response 500
 
-## /project/{id}
+## /projects/{id}
 
 ### Modify project [PUT]
 
@@ -126,14 +120,14 @@ Highlights can either be a blog entry, or a project.
 
 ### Modify highlights [PUT]
 
-(Removes highlights as well)
+(Removes highlights as well since there should only be a maximum of 4 highlights.)
 
 + Response 204
 + Response 500
 
 # Group Custom Pages
 
-## /custom-page
+## /custom-pages
 
 ### Get all custom pages [GET]
 

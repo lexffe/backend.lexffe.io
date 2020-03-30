@@ -1,0 +1,118 @@
+openapi: 3.0.1
+info:
+  version: 1.0.0
+  title: Backend API
+  description: The set of API used for backend.lexffe.io.
+servers:
+- url: https://backend.lexffe.io
+tags:
+- name: Posts
+- name: Projects
+- name: Custom-Pages
+- name: Highlights
+paths:
+  
+  /posts:
+    
+    get:
+      tags:
+        - Posts
+      summary: Gets all the published blog posts.
+      description: '
+        (implementation note: if client is authenticated i.e. admin, return those with "published" == false as well.)
+      '
+      parameters:
+      - name: d
+        in: query
+        description: Pagination delta, limited to 10 posts per query.
+        required: false
+        schema:
+          type: integer
+          format: uint32
+      responses:
+        200:
+          description: Successful Response is a JSON array of posts, sans HTML/Markdown.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SimplePost'
+        500:
+          description: Fails (only) when there is an error at server-side.
+      security:
+        - api_key: []
+    
+    post:
+      tags:
+        - Posts
+      summary: Create a new blog post.
+      description: ""
+      requestBody:
+        description: The blog post to be added into the store.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tags:
+                  type: array
+                  items:
+                    type: string
+                title:
+                  type: string
+                subtitle:
+                  type: string
+                markdown:
+                  type: string
+                published:
+                  type: boolean
+      responses:
+        201:
+          description: 201 Created response
+        400:
+          description: bad / malformed request
+        401:
+          description: not authorized
+        500:
+          description: server error
+
+  /posts/{id}:
+      
+      get:
+        tags:
+          - Posts
+        summary: Get one single post.
+        parameters:
+        - name: 
+      
+
+components:
+
+  schemas:
+    SimplePost:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        markdown:
+          type: string
+        published:
+          type: boolean
+        
+    Post:
+      type: object
+    Highlights:
+      type: object
+
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header
