@@ -5,4 +5,9 @@ user = ""
 pass = ""
 
 [web]
+prod = true
 port = ":8080"
+
+[admin]
+user = ""
+pass = "hunter2"

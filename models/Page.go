@@ -1,16 +1,17 @@
 package models
 
-type PageType int
-
-const (
-	CV PageType = iota
-	Custom
+import (
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type Page struct {
+// CustomPage is a generic markdown page.
+// The view should render the custom pages in a nav.
+// CV will be put in the same collection as CustomPage. The flag IsCV distinguishes that.
+type CustomPage struct {
+	ID primitive.ObjectID `json:"_id" bson:"_id, omitempty"`
 	Title string `json:"title" bson:"title"`
 	FullTitle string `json:"full_title" bson:"full_title"`
-	PageType PageType `json:"type" bson:"type"`
+	IsCV bool `json:"is_cv" bson:"is_cv"`
 	Markdown string `json:"markdown" bson:"markdown"`
 	HTML string `json:"html" bson:"html"`
 	Published bool `json:"published" bson:"published"`

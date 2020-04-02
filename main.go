@@ -21,7 +21,12 @@ type config struct {
 		pass string
 	}
 	web struct {
+		prod bool
 		port string
+	}
+	admin struct {
+		user string
+		pass string
 	}
 }
 
@@ -32,7 +37,6 @@ Database connection initialisation
 Database instance propagation
 Router initialisation
 Route registration
-
 */
 
 func main() {
@@ -88,13 +92,24 @@ func main() {
 
 	// Router
 
+	if (conf.web.prod) {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
+
 	r := gin.Default()
 
 	// Registering database middleware
 
-	r.Use(func(c *gin.Context) {
-		c.Set("db", db) // set kv
-		c.Next()
+	r.Use(func(ctx *gin.Context) {
+		ctx.Set("db", db) // set kv
+		ctx.Next()
+	})
+
+	r.Use(func(ctx *gin.Context) {
+		ctx.Set("username", conf.admin.user)
+		ctx.Next()
 	})
 
 	handlers.RegisterPostRoutes(r.Group("/blog"))

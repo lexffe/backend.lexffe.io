@@ -22,7 +22,7 @@ paths:
         (implementation note: if client is authenticated i.e. admin, return those with "published" == false as well.)
       '
       parameters:
-      - name: d
+      - name: skip
         in: query
         description: Pagination delta, limited to 10 posts per query.
         required: false

@@ -12,6 +12,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/pelletier/go-toml v1.6.0
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pquerna/otp v1.2.0 // indirect
 	github.com/stretchr/testify v1.5.1 // indirect
 	go.mongodb.org/mongo-driver v1.3.1
 	golang.org/x/crypto v0.0.0-20200323165209-0ec3e9974c59 // indirect

@@ -6,7 +6,14 @@ import (
 )
 
 // ParseKebab is 
-func ParseKebab(s string) string {
+func ParseKebab(s string) (string, error) {
 	// compile regex, find string, join string, return.
-	return strings.Join(regexp.MustCompile(`([\w]+)`).FindAllString(s, -1), "-")
+
+	inst, err := regexp.Compile(`([\w]+)`)
+
+	if err != nil {
+		return "", err
+	}
+
+	return strings.Join(inst.FindAllString(s, -1), "-"), nil
 }
