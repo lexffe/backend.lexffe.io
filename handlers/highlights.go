@@ -1,49 +1,88 @@
 package handlers
 
 import (
-	"github.com/lexffe/backend.lexffe.io/auth"
-	"context"
-	"log"
-	"time"
+	"errors"
+	"net/http"
 
-	"github.com/lexffe/backend.lexffe.io/helpers"
-	"github.com/lexffe/backend.lexffe.io/models"
+	"github.com/lexffe/backend.lexffe.io/auth"
+
 	"github.com/gin-gonic/gin"
+	"github.com/lexffe/backend.lexffe.io/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // RegisterHLRoutes registers the router with all highlights-related subroutes.
 func RegisterHLRoutes(r *gin.RouterGroup) {
-	
+
 	r.GET("/highlights", getHighlightsHandler)
-
-	authRoutes := r.Group("/", auth.BearerMiddleware)
-
-	authRoutes.PUT("/highlights", updateHighlightsHandler) // need middleware
-	authRoutes.DELETE("/highlights", clearHighlightsHandler) // need middleware
+	r.POST("/highlights", auth.BearerMiddleware, setHighlightHandler)
 
 }
 
 // Note: max highlights == 5
 
-func getHighlightsHandler(c *gin.Context) {
-	db := c.MustGet("db").(mongo.Database)
-	coll := db.Collection("highlights")
+func getHighlightsHandler(ctx *gin.Context) {
 
-	cur, err :=	coll.Find(context.Background(), bson.D{})
+	db := ctx.MustGet("db").(mongo.Database)
+	coll := db.Collection(collectionHighlights)
+
+	cur, err := coll.Find(ctx, bson.M{})
 
 	if err != nil {
-		
+		ctx.Status(http.StatusInternalServerError)
+		ctx.Error(err)
+		return
 	}
 
+	var highlights []models.Highlight
+
+	if err = cur.All(ctx, highlights); err != nil {
+		ctx.Status(http.StatusInternalServerError)
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, highlights)
 }
 
-func updateHighlightsHandler(c *gin.Context) {
+func setHighlightHandler(ctx *gin.Context) {
 
-}
+	var HighlightsBody struct {
+		Highlights []models.Highlight `json:"highlights,dive"`
+	}
 
-func clearHighlightsHandler(c *gin.Context) {
-	// Clear highlights, populate highlights with blog posts.
+	if err := ctx.BindJSON(&HighlightsBody); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	
+	db := ctx.MustGet("db").(mongo.Database)
+	coll := db.Collection(collectionHighlights)
 
+	models := []mongo.WriteModel{}
+
+	for _, v := range HighlightsBody.Highlights {
+		models = append(models, mongo.NewInsertOneModel().SetDocument(v))
+	}
+
+	opts := options.BulkWrite().SetOrdered(false)
+
+	res, err := coll.BulkWrite(ctx, models, opts)
+
+	if err != nil {
+		ctx.Status(http.StatusInternalServerError)
+		ctx.Error(err)
+		return
+	}
+
+	if int(res.InsertedCount) != len(HighlightsBody.Highlights) {
+		ctx.Status(http.StatusInternalServerError)
+		ctx.Error(errors.New("mismatched insert count"))
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
 }

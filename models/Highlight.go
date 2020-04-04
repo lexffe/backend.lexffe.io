@@ -9,10 +9,10 @@ type HighlightType string
 
 const (
 	// HighlightProject asserts that the highlight type is a project
-	HighlightProject HighlightType = "Project"
+	HighlightProject HighlightType = "project"
 
 	// HighlightPost asserts that the highlight type is a blog post
-	HighlightPost HighlightType = "Post"
+	HighlightPost HighlightType = "post"
 )
 
 // Highlight is a complete model for highlights (for the front page)
