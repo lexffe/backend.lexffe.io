@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lexffe/backend.lexffe.io/auth"
 	"github.com/lexffe/backend.lexffe.io/helpers"
 	"github.com/lexffe/backend.lexffe.io/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -14,21 +15,20 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const collectionName = "post"
-const retDocLimit = 10
-
 // TODO: write out all db queries for each action
 // TODO: determine if re-indexing is needed for descending order of documents (newest post first)
 
 // RegisterPostRoutes registers the router with all post related subroutes.
 func RegisterPostRoutes(r *gin.RouterGroup) {
 
-	r.GET("/post", getPostsHandler)
-	r.GET("/post/:id", getPostHandler)
+	r.GET("/", getPostsHandler)
+	r.GET("/:id", getPostHandler)
 
-	r.POST("/post", createPostHandler)       // need auth middleware
-	r.PUT("/post/:id", updatePostHandler)    // need auth middleware
-	r.DELETE("/post/:id", deletePostHandler) // need auth middleware
+	authRoutes := r.Group("/", auth.BearerMiddleware)
+
+	authRoutes.POST("/", createPostHandler)      // need auth middleware
+	authRoutes.PUT("/:id", updatePostHandler)    // need auth middleware
+	authRoutes.DELETE("/:id", deletePostHandler) // need auth middleware
 
 }
 
@@ -48,7 +48,7 @@ func getPostsHandler(ctx *gin.Context) {
 
 	// get db from context, and assert type
 	db := ctx.MustGet("db").(*mongo.Database)
-	coll := db.Collection(collectionName)
+	coll := db.Collection(collectionPosts)
 
 	// only get the published posts
 	filter := bson.M{
@@ -61,7 +61,7 @@ func getPostsHandler(ctx *gin.Context) {
 	}
 
 	// setup projection and pagination
-	opts := options.Find().SetLimit(retDocLimit).SetSkip(int64(skip)).SetProjection(bson.M{
+	opts := options.Find().SetLimit(paginationLimit).SetSkip(int64(skip)).SetProjection(bson.M{
 		"_id":              true,
 		"tags":             true,
 		"title":            true,
@@ -124,7 +124,7 @@ func getPostHandler(ctx *gin.Context) {
 	}
 
 	db := ctx.MustGet("db").(*mongo.Database)
-	coll := db.Collection(collectionName)
+	coll := db.Collection(collectionPosts)
 
 	// only get the published posts
 	filter := bson.M{"published": true}
@@ -180,6 +180,7 @@ func createPostHandler(ctx *gin.Context) {
 	var body models.Post
 
 	if err := ctx.BindJSON(&body); err != nil {
+		ctx.Status(http.StatusInternalServerError)
 		ctx.Error(err)
 		return
 	}
@@ -207,7 +208,7 @@ func createPostHandler(ctx *gin.Context) {
 	// database operation
 
 	db := ctx.MustGet("db").(*mongo.Database)
-	_, err = db.Collection(collectionName).InsertOne(ctx, body)
+	_, err = db.Collection(collectionPosts).InsertOne(ctx, body)
 
 	if err != nil {
 		ctx.Status(http.StatusInternalServerError)
@@ -222,10 +223,24 @@ func createPostHandler(ctx *gin.Context) {
 
 func updatePostHandler(ctx *gin.Context) {
 
+	docID := ctx.Param("id")
+
+	if docID == "" {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(errors.New("no document identifier provided"))
+		return
+	}
+
 	var body models.Post
 
 	if err := ctx.BindJSON(&body); err != nil {
 		ctx.Error(err)
+		return
+	}
+
+	if body.ID.String() != docID {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(errors.New("document identifier is different than id in path"))
 		return
 	}
 
@@ -255,7 +270,7 @@ func updatePostHandler(ctx *gin.Context) {
 	}
 
 	db := ctx.MustGet("db").(*mongo.Database)
-	res, err := db.Collection(collectionName).UpdateOne(ctx, filter, body)
+	res, err := db.Collection(collectionPosts).UpdateOne(ctx, filter, body)
 
 	if err != nil {
 		ctx.Status(http.StatusInternalServerError)
@@ -288,7 +303,7 @@ func deletePostHandler(ctx *gin.Context) {
 	}
 
 	db := ctx.MustGet("db").(*mongo.Database)
-	res := db.Collection(collectionName).FindOneAndDelete(ctx, filter)
+	res := db.Collection(collectionPosts).FindOneAndDelete(ctx, filter)
 
 	if res.Err() != nil {
 		if res.Err() == mongo.ErrNoDocuments {

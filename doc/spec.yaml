@@ -10,6 +10,7 @@ tags:
 - name: Projects
 - name: Custom-Pages
 - name: Highlights
+- name: CV
 paths:
   
   /posts:
@@ -19,7 +20,7 @@ paths:
         - Posts
       summary: Gets all the published blog posts.
       description: '
-        (implementation note: if client is authenticated i.e. admin, return those with "published" == false as well.)
+        (Note: if client is authenticated i.e. admin, "published" == false will be retrieved as well.)
       '
       parameters:
       - name: skip
@@ -37,7 +38,20 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/SimplePost'
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                    tags:
+                      type: string
+                    title:
+                      type: string
+                    searchable_title:
+                      type: string
+                    subtitle:
+                      type: string
+        400:
+          description: Malformed request (when skip is not a number.)
         500:
           description: Fails (only) when there is an error at server-side.
       security:
@@ -90,22 +104,6 @@ paths:
 components:
 
   schemas:
-    SimplePost:
-      type: object
-      properties:
-        tags:
-          type: array
-          items:
-            type: string
-        title:
-          type: string
-        subtitle:
-          type: string
-        markdown:
-          type: string
-        published:
-          type: boolean
-        
     Post:
       type: object
     Highlights:

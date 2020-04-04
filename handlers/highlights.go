@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/lexffe/backend.lexffe.io/auth"
 	"context"
 	"log"
 	"time"
@@ -16,8 +17,11 @@ import (
 func RegisterHLRoutes(r *gin.RouterGroup) {
 	
 	r.GET("/highlights", getHighlightsHandler)
-	r.PUT("/highlights", updateHighlightsHandler) // need middleware
-	r.DELETE("/highlights", clearHighlightsHandler) // need middleware
+
+	authRoutes := r.Group("/", auth.BearerMiddleware)
+
+	authRoutes.PUT("/highlights", updateHighlightsHandler) // need middleware
+	authRoutes.DELETE("/highlights", clearHighlightsHandler) // need middleware
 
 }
 

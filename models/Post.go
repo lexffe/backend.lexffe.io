@@ -15,7 +15,6 @@ Post is a complete model for the blog posts.
 Note: Projection may vary based on the context (e.g. which page the user is on.)
 
 and the projection must be determined when querying the database.
-
 */
 type Post struct {
 	// PostId is MongoDB.ObjectId. Used for internal operation.
@@ -32,7 +31,7 @@ type Post struct {
 
 		Note: This field is used for MongoDB indexing.
 
-		When a route like /posts/?title={searchable_title}`
+		When a route like /posts/{searchable_title} is used, the controller should use this as filter instead.
 	*/
 	SearchableTitle string `json:"searchable_title" bson:"searchable_title"`
 
@@ -44,7 +43,7 @@ type Post struct {
 
 	/*
 		HTML is a generated field from the markdown template.
-		It is used for rendering the blog post itself. .innerHTML
+		It is used for rendering the blog post itself. (.innerHTML)
 	*/
 	HTML string `json:"html" bson:"html"`
 

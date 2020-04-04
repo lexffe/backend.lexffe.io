@@ -5,22 +5,20 @@ import (
 )
 
 // HighlightType is a type alias to the type of the object in highlight
-type HighlightType int
+type HighlightType string
 
 const (
-	// ProjectHighlight -
-	ProjectHighlight HighlightType = iota
+	// HighlightProject asserts that the highlight type is a project
+	HighlightProject HighlightType = "Project"
 
-	// PostHighlight -
-	PostHighlight
+	// HighlightPost asserts that the highlight type is a blog post
+	HighlightPost HighlightType = "Post"
 )
 
 // Highlight is a complete model for highlights (for the front page)
 // This model serves only as a reference. Further query is required.
 type Highlight struct {
-	ID primitive.ObjectID `json:"_id" bson:"_id, omitempty"`
-	ObjectType HighlightType `json:"object_type" bson:"object_type"`
-	ObjectID string `json:"object_id" bson:"object_id"`
+	ID          primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
+	Type        HighlightType      `json:"type" bson:"type"`
+	ObjectIDRef string             `json:"object_id" bson:"object_id"`
 }
-
-// query: db.coll.find({PostId}, { Title: true, Subtitle: true, ...})
