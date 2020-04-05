@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lexffe/backend.lexffe.io/auth"
+	// "github.com/lexffe/backend.lexffe.io/auth"
 	"github.com/lexffe/backend.lexffe.io/helpers"
 	"github.com/lexffe/backend.lexffe.io/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,11 +18,11 @@ func RegisterCustomPageRoutes(r *gin.RouterGroup) {
 	r.GET("/", getCustomPagesHandler)
 	r.GET("/:id", getCustomPageHandler)
 
-	authRoutes := r.Group("/", auth.BearerMiddleware)
+	// authRoutes := r.Group("/", auth.BearerMiddleware)
 
-	authRoutes.POST("/", createCustomPageHandler)
-	authRoutes.PUT("/:id", updateCustomPageHandler)
-	authRoutes.DELETE("/:id", deleteCustomPageHandler)
+	r.POST("/", createCustomPageHandler)
+	r.PUT("/:id", updateCustomPageHandler)
+	r.DELETE("/:id", deleteCustomPageHandler)
 }
 
 func getCustomPagesHandler(ctx *gin.Context) {
@@ -153,7 +153,7 @@ func createCustomPageHandler(ctx *gin.Context) {
 
 	if err != nil {
 		ctx.Status(http.StatusInternalServerError)
-		ctx.Error(errors.New("createPostHandler: cannot insert document"))
+		ctx.Error(errors.New("createCustomPageHandler: cannot insert document"))
 		ctx.Error(err)
 		return
 	}
@@ -171,7 +171,7 @@ func updateCustomPageHandler(ctx *gin.Context) {
 		return
 	}
 
-	var body models.Post
+	var body models.CustomPage
 
 	if err := ctx.BindJSON(&body); err != nil {
 		ctx.Error(err)

@@ -19,6 +19,6 @@ const (
 // This model serves only as a reference. Further query is required.
 type Highlight struct {
 	ID          primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
-	Type        HighlightType      `json:"type" bson:"type"`
-	ObjectIDRef string             `json:"object_id" bson:"object_id"`
+	Type        HighlightType      `json:"type" bson:"type" binding:"required"`
+	ObjectIDRef string             `json:"object_id" bson:"object_id" binding:"required"`
 }

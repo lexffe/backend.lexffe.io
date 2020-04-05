@@ -2,15 +2,17 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lexffe/backend.lexffe.io/auth"
+	// "github.com/lexffe/backend.lexffe.io/auth"
 	"github.com/lexffe/backend.lexffe.io/helpers"
 	"github.com/lexffe/backend.lexffe.io/models"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -24,11 +26,9 @@ func RegisterPostRoutes(r *gin.RouterGroup) {
 	r.GET("/", getPostsHandler)
 	r.GET("/:id", getPostHandler)
 
-	authRoutes := r.Group("/", auth.BearerMiddleware)
-
-	authRoutes.POST("/", createPostHandler)      // need auth middleware
-	authRoutes.PUT("/:id", updatePostHandler)    // need auth middleware
-	authRoutes.DELETE("/:id", deletePostHandler) // need auth middleware
+	r.POST("/", createPostHandler)      // need auth middleware
+	r.PUT("/:id", updatePostHandler)    // need auth middleware
+	r.DELETE("/:id", deletePostHandler) // need auth middleware
 
 }
 
@@ -129,13 +129,15 @@ func getPostHandler(ctx *gin.Context) {
 	// only get the published posts
 	filter := bson.M{"published": true}
 
-	// if user is authenticated, get the drafts as well. i.e. no filter
-	if ctx.MustGet("Authenticated").(bool) == true {
-		delete(filter, "published")
-	}
-
 	if isObjID {
-		filter["_id"] = docID
+		objID, err := primitive.ObjectIDFromHex(docID)
+		if err != nil {
+			ctx.Status(http.StatusInternalServerError)
+			ctx.Error(err)
+			return
+		}
+
+		filter["_id"] = objID
 	} else {
 		filter["searchable_title"] = docID
 	}
@@ -148,6 +150,13 @@ func getPostHandler(ctx *gin.Context) {
 		"subtitle":         true,
 		"html":             true,
 	})
+
+	// if user is authenticated, get the drafts as well. i.e. no filter
+	if ctx.MustGet("Authenticated").(bool) == true {
+		log.Println("Authenticated.")
+		delete(filter, "published")
+		opts.SetProjection(bson.M{})
+	}
 
 	var doc models.Post
 

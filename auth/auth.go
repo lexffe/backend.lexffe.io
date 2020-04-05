@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	"errors"
+	"io"
+	"log"
 	"net/http"
 	"strings"
 
@@ -77,6 +81,7 @@ func OTPInitialization(ctx context.Context, encryptionKey string, db *mongo.Data
 		if res.Err() == mongo.ErrNoDocuments {
 
 			// generate totp key
+			log.Println("totp key not found, generating a new one.")
 
 			totpKey, err := totp.Generate(totp.GenerateOpts{
 				Issuer:      "backend",
@@ -85,14 +90,27 @@ func OTPInitialization(ctx context.Context, encryptionKey string, db *mongo.Data
 				Algorithm:   otp.AlgorithmSHA512,
 			})
 
+			if err != nil {
+				return err
+			}
+
+			log.Printf("new totp key: %v\n", totpKey.String())
+
 			totpKeyBuf := bytes.NewBufferString(totpKey.String())
 
 			// initialise cipher
 
 			encryptionKeyBuf := bytes.NewBufferString(encryptionKey)
-			cipher, err := aes.NewCipher(encryptionKeyBuf.Bytes())
+			block, err := aes.NewCipher(encryptionKeyBuf.Bytes())
 
 			if err != nil {
+				return err
+			}
+
+			ciphertext := make([]byte, aes.BlockSize+totpKeyBuf.Len())
+			iv := ciphertext[:aes.BlockSize]
+
+			if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 				return err
 			}
 
@@ -100,7 +118,12 @@ func OTPInitialization(ctx context.Context, encryptionKey string, db *mongo.Data
 
 			var authModelInstance authenticationModel
 
-			cipher.Encrypt(authModelInstance.OTPEncrypted, totpKeyBuf.Bytes())
+			stream := cipher.NewCFBEncrypter(block, iv)
+			stream.XORKeyStream(ciphertext[aes.BlockSize:], totpKeyBuf.Bytes())
+
+			// cipher.Encrypt(authModelInstance.OTPEncrypted, totpKeyBuf.Bytes())
+
+			authModelInstance.OTPEncrypted = ciphertext
 
 			// insert model into database
 
@@ -162,7 +185,7 @@ func AuthenticateHandler(ctx *gin.Context) {
 	// decrypt the otp key
 
 	keybuf := bytes.NewBufferString(encryptionKey)
-	cipher, err := aes.NewCipher(keybuf.Bytes())
+	block, err := aes.NewCipher(keybuf.Bytes())
 
 	if err != nil {
 		ctx.Status(http.StatusInternalServerError)
@@ -170,7 +193,19 @@ func AuthenticateHandler(ctx *gin.Context) {
 		return
 	}
 
-	cipher.Decrypt(otpBytes, authData.OTPEncrypted)
+	if len(authData.OTPEncrypted) < aes.BlockSize {
+		ctx.Status(http.StatusInternalServerError)
+		ctx.Error(err)
+		return
+	}
+
+	iv := authData.OTPEncrypted[:aes.BlockSize]
+	ciphertext := authData.OTPEncrypted[aes.BlockSize:]
+
+	stream := cipher.NewCFBDecrypter(block, iv)
+	stream.XORKeyStream(ciphertext, otpBytes)
+
+	// cipher.Decrypt(otpBytes, authData.OTPEncrypted)
 	if _, err := otpKey.Write(otpBytes); err != nil {
 		ctx.Status(http.StatusInternalServerError)
 		ctx.Error(err)
@@ -186,9 +221,9 @@ func AuthenticateHandler(ctx *gin.Context) {
 		apiKey, err := helpers.HexStringGen(5)
 
 		if err != nil {
-      ctx.Status(http.StatusInternalServerError)
-      ctx.Error(err)
-      return
+			ctx.Status(http.StatusInternalServerError)
+			ctx.Error(err)
+			return
 		}
 
 		val, exists := keycache.Get("keys")
@@ -198,44 +233,44 @@ func AuthenticateHandler(ctx *gin.Context) {
 		} else {
 			var nval = append(val.([]string), apiKey)
 			keycache.Set("keys", nval, cache.DefaultExpiration)
-    }
-    
-    ctx.String(http.StatusOK, apiKey)
-    return
-  }
-  
-  ctx.Status(http.StatusUnauthorized)
-  return
+		}
+
+		ctx.String(http.StatusOK, apiKey)
+		return
+	}
+
+	ctx.Status(http.StatusUnauthorized)
+	return
 }
 
 // BearerMiddleware -
 func BearerMiddleware(ctx *gin.Context) {
 
-  key := strings.Split(ctx.GetHeader("Authorization"), " ") // Bearer aabbccddeeff
+	key := strings.Split(ctx.GetHeader("Authorization"), " ") // Bearer aabbccddeeff
 
-  keycache := ctx.MustGet("keycache").(*cache.Cache)
+	keycache := ctx.MustGet("keycache").(*cache.Cache)
 
-  val, exists := keycache.Get("keys")
+	val, exists := keycache.Get("keys")
 
-  if exists != true {
-    ctx.Status(http.StatusUnauthorized)
-    return
-  }
+	if exists != true {
+		ctx.Status(http.StatusUnauthorized)
+		return
+	}
 
-  var found = false
+	var found = false
 
-  for i := range val.([]string) {
-    if val.([]string)[i] == key[1] {
-      found = true
-    }
-  }
+	for i := range val.([]string) {
+		if val.([]string)[i] == key[1] {
+			found = true
+		}
+	}
 
-  if (found == true) {
-    ctx.Set("Authenticated", true)
-    ctx.Next()
-    return
-  }
+	if found == true {
+		ctx.Set("Authenticated", true)
+		ctx.Next()
+		return
+	}
 
-  ctx.Status(http.StatusUnauthorized)
-  return
+	ctx.Status(http.StatusUnauthorized)
+	return
 }

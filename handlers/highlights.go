@@ -13,11 +13,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// RegisterHLRoutes registers the router with all highlights-related subroutes.
+// RegisterHLRoutes registers the router with all highlights related subroutes.
 func RegisterHLRoutes(r *gin.RouterGroup) {
 
-	r.GET("/highlights", getHighlightsHandler)
-	r.POST("/highlights", auth.BearerMiddleware, setHighlightHandler)
+	r.GET("/", getHighlightsHandler)
+	r.POST("/", auth.BearerMiddleware, setHighlightHandler)
 
 }
 
@@ -58,7 +58,7 @@ func setHighlightHandler(ctx *gin.Context) {
 		ctx.Error(err)
 		return
 	}
-	
+
 	db := ctx.MustGet("db").(mongo.Database)
 	coll := db.Collection(collectionHighlights)
 

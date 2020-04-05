@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"io/ioutil"
 	"log"
-	"os"
 	"time"
+
+	// "os"
+	// "flag"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lexffe/backend.lexffe.io/auth"
@@ -18,18 +21,18 @@ import (
 const appName = "backend"
 
 type config struct {
-	mongo struct {
-		addr     string
-		database string
-		user     string
-		pass     string
+	Mongo struct {
+		Addr     string
+		Database string
+		User     string
+		Pass     string
 	}
-	web struct {
-		prod bool
-		port string
+	Web struct {
+		Prod bool
+		Port string
 	}
-	admin struct {
-		pass string
+	Admin struct {
+		Pass string
 	}
 }
 
@@ -46,34 +49,23 @@ func main() {
 
 	// Config: read file
 
-	var confContent []byte
-
-	file, err := os.OpenFile("config.toml", os.O_RDONLY, 0600)
+	confContent, err := ioutil.ReadFile("config.toml")
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	if _, err = file.Read(confContent); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := file.Close(); err != nil {
 		log.Fatal(err)
 	}
 
 	// Config: parse config
 
-	conf := config{}
+	var conf config
 	if err = toml.Unmarshal(confContent, &conf); err != nil {
 		log.Fatal(err)
 	}
-
 	// Database: connection initialisation
 
-	mongoOpts := options.Client().ApplyURI(conf.mongo.addr).SetAuth(options.Credential{
+	mongoOpts := options.Client().ApplyURI(conf.Mongo.Addr).SetAuth(options.Credential{
 		AuthMechanism: "SCRAM-SHA-256",
-		Username:      conf.mongo.user,
-		Password:      conf.mongo.pass,
+		Username:      conf.Mongo.User,
+		Password:      conf.Mongo.Pass,
 	}).SetAppName(appName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -85,15 +77,17 @@ func main() {
 	}
 
 	// check alive
-	if err = client.Ping(ctx, nil); err != nil {
+	if err := client.Ping(ctx, nil); err != nil {
 		log.Fatal(err)
 	}
 
-	db := client.Database(conf.mongo.database)
+	db := client.Database(conf.Mongo.Database)
 
 	// OTP initialisation
-	
-	auth.OTPInitialization(ctx, conf.admin.pass, db)
+
+	if err := auth.OTPInitialization(ctx, conf.Admin.Pass, db); err != nil {
+		log.Fatal(err)
+	}
 
 	// API Cache
 
@@ -101,7 +95,7 @@ func main() {
 
 	// Router
 
-	if conf.web.prod {
+	if conf.Web.Prod {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
@@ -126,13 +120,14 @@ func main() {
 	// registering auth variables
 
 	r.Use(func(ctx *gin.Context) {
-		ctx.Set("otp_crypt", conf.admin.pass)
+		ctx.Set("otp_crypt", conf.Admin.Pass)
 		ctx.Set("Authenticated", false)
 		ctx.Next()
 	})
 
 	r.POST("/auth", auth.AuthenticateHandler)
-	
+	r.Use(auth.BearerMiddleware)
+
 	handlers.RegisterPostRoutes(r.Group("/posts"))
 	handlers.RegisterProjectRoutes(r.Group("/projects"))
 	handlers.RegisterCustomPageRoutes(r.Group("/custom-page"))
@@ -140,5 +135,5 @@ func main() {
 	handlers.RegisterCVRoutes(r.Group("/cv"))
 
 	// bon voyage
-	log.Fatal(r.Run(conf.web.port))
+	log.Fatal(r.Run(conf.Web.Port))
 }

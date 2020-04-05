@@ -6,24 +6,24 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lexffe/backend.lexffe.io/auth"
+	// "github.com/lexffe/backend.lexffe.io/auth"
 	"github.com/lexffe/backend.lexffe.io/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// RegisterProjectRoutes registers the router with all post related subroutes.
+// RegisterProjectRoutes registers the router with all project related subroutes.
 func RegisterProjectRoutes(r *gin.RouterGroup) {
 
 	r.GET("/", getProjectsHandler)
 	r.GET("/:id", getProjectHandler)
 
-	authRoutes := r.Group("/", auth.BearerMiddleware)
+	// authRoutes := r.Group("/", auth.BearerMiddleware)
 
-	authRoutes.POST("/", createProjectHandler)       // need auth middleware
-	authRoutes.PUT("/:id", updateProjectHandler)    // need auth middleware
-	authRoutes.DELETE("/:id", deleteProjectHandler) // need auth middleware
+	r.POST("/", createProjectHandler)       // need auth middleware
+	r.PUT("/:id", updateProjectHandler)    // need auth middleware
+	r.DELETE("/:id", deleteProjectHandler) // need auth middleware
 
 }
 
@@ -151,7 +151,7 @@ func updateProjectHandler(ctx *gin.Context) {
 		return
 	}
 
-	var body models.Post
+	var body models.Project
 
 	if err := ctx.BindJSON(&body); err != nil {
 		ctx.Error(err)
@@ -166,7 +166,6 @@ func updateProjectHandler(ctx *gin.Context) {
 
 	filter := bson.M{
 		"_id":              body.ID,
-		"searchable_title": body.SearchableTitle,
 	}
 
 	db := ctx.MustGet("db").(*mongo.Database)

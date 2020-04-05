@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// ParseKebab is 
+// ParseKebab is
 func ParseKebab(s string) (string, error) {
 	// compile regex, find string, join string, return.
 
@@ -15,5 +15,5 @@ func ParseKebab(s string) (string, error) {
 		return "", err
 	}
 
-	return strings.Join(inst.FindAllString(s, -1), "-"), nil
+	return strings.ToLower(strings.Join(inst.FindAllString(s, -1), "-")), nil
 }
