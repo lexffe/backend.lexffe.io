@@ -91,14 +91,14 @@ paths:
         500:
           description: server error
 
-  /posts/{id}:
+  # /posts/{id}:
       
-      get:
-        tags:
-          - Posts
-        summary: Get one single post.
-        parameters:
-        - name: 
+  #     get:
+  #       tags:
+  #         - Posts
+  #       summary: Get one single post.
+  #       parameters:
+  #       - name: 
       
 
 components:
