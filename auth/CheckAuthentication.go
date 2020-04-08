@@ -12,6 +12,6 @@ func CheckAuthentication(ctx *gin.Context) {
 		ctx.Next()
 		return
 	}
-	ctx.Status(http.StatusUnauthorized)
+	ctx.AbortWithStatus(http.StatusUnauthorized)
 	return
 }
