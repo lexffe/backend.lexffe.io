@@ -11,11 +11,11 @@ import (
 )
 
 // OTPInitialization initialises the OTP key for admin access
-func OTPInitialization(ctx context.Context, db *mongo.Database) error {
+func (s *AuthenticateHandler) OTPInitialization(ctx context.Context) error {
 
 	// check if database has existing OTP code. there should only be one
 
-	res := db.Collection(collectionAuth).FindOne(ctx, bson.M{})
+	res := s.DB.Collection(s.Collection).FindOne(ctx, bson.M{})
 
 	if res.Err() != nil {
 
@@ -45,7 +45,7 @@ func OTPInitialization(ctx context.Context, db *mongo.Database) error {
 
 			// insert model into database
 
-			if _, err := db.Collection(collectionAuth).InsertOne(ctx, auth); err != nil {
+			if _, err := s.DB.Collection(s.Collection).InsertOne(ctx, auth); err != nil {
 				return err
 			}
 

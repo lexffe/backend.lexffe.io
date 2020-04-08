@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lexffe/backend.lexffe.io/helpers"
@@ -12,8 +13,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// AuthenticateHandler checks the otp key against the database, then returns a temporary api key valid for 2 hours
-func AuthenticateHandler(ctx *gin.Context) {
+// Handler checks the otp key against the database, then returns a temporary api key valid for 2 hours
+func (s *AuthenticateHandler) Handler(ctx *gin.Context) {
 
 	// Parse body: username, otp
 
@@ -27,10 +28,7 @@ func AuthenticateHandler(ctx *gin.Context) {
 
 	// look for user's otp key in the db
 
-	db := ctx.MustGet("db").(*mongo.Database)
-	coll := db.Collection(collectionAuth)
-
-	res := coll.FindOne(ctx, bson.M{})
+	res := s.DB.Collection(s.Collection).FindOne(ctx.Request.Context(), bson.M{})
 
 	if res.Err() != nil {
 		if res.Err() == mongo.ErrNoDocuments {
@@ -49,12 +47,9 @@ func AuthenticateHandler(ctx *gin.Context) {
 		return
 	}
 
-	validated := totp.Validate(authInfo.OTPToken, authData.OTPKey)
-
-	if validated == true { // authenticated.
+	if validated := totp.Validate(authInfo.OTPToken, authData.OTPKey); validated == true { // authenticated.
 		// generate apikey subroutine
 
-		keycache := ctx.MustGet("keycache").(*cache.Cache)
 		apiKey, err := helpers.HexStringGen(8)
 
 		if err != nil {
@@ -62,14 +57,16 @@ func AuthenticateHandler(ctx *gin.Context) {
 			return
 		}
 
-		val, exists := keycache.Get("keys")
+		val, exists := s.Cache.Get("keys")
 
 		if exists != true {
-			keycache.Add("keys", []string{apiKey}, cache.DefaultExpiration)
+			s.Cache.Add("keys", []string{apiKey}, cache.DefaultExpiration)
 		} else {
 			var nval = append(val.([]string), apiKey)
-			keycache.Set("keys", nval, cache.DefaultExpiration)
+			s.Cache.Set("keys", nval, cache.DefaultExpiration)
 		}
+
+		ctx.Header("Expires", time.Now().Add( 1 * time.Hour ).String())
 
 		ctx.JSON(http.StatusOK, gin.H{
 			"api_key": apiKey,

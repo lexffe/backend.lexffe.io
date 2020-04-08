@@ -1,7 +1,9 @@
 package auth
 
 import (
+	"github.com/patrickmn/go-cache"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 /*
@@ -41,8 +43,7 @@ import (
 */
 
 const (
-	collectionAuth = "auth"
-	totpIssuer = "backend"
+	totpIssuer      = "backend"
 	totpAccountName = "admin@backend"
 )
 
@@ -53,4 +54,11 @@ type authHandlerBody struct {
 type authDBModel struct {
 	ID     primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
 	OTPKey string             `json:"otp_key" bson:"otp_key"`
+}
+
+// AuthenticateHandler is a helper struct for all page handlers.
+type AuthenticateHandler struct {
+	DB         *mongo.Database
+	Cache      *cache.Cache
+	Collection string
 }
