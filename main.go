@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"time"
 
 	// "os"
@@ -12,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lexffe/backend.lexffe.io/auth"
 	"github.com/lexffe/backend.lexffe.io/handlers"
+	"github.com/lexffe/backend.lexffe.io/models"
 	"github.com/patrickmn/go-cache"
 	"github.com/pelletier/go-toml"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -30,9 +32,6 @@ type config struct {
 	Web struct {
 		Prod bool
 		Port string
-	}
-	Admin struct {
-		Pass string
 	}
 }
 
@@ -83,13 +82,7 @@ func main() {
 
 	db := client.Database(conf.Mongo.Database)
 
-	// OTP initialisation
-
-	if err := auth.OTPInitialization(ctx, conf.Admin.Pass, db); err != nil {
-		log.Fatal(err)
-	}
-
-	// API Cache
+	// API Key cache
 
 	keycache := cache.New(1*time.Hour, 2*time.Hour)
 
@@ -103,37 +96,78 @@ func main() {
 
 	r := gin.Default()
 
-	// Registering database middleware
+	// registering authentication routes
 
-	r.Use(func(ctx *gin.Context) {
-		ctx.Set("db", db) // set kv
-		ctx.Next()
-	})
+	authHandler := auth.AuthenticateHandler{
+		DB: db,
+		Cache: keycache,
+		Collection: "auth",
+	}
 
-	// registering cache
+	// initialize otp
+	if err := authHandler.OTPInitialization(ctx); err != nil {
+		log.Fatal(err)
+	}
 
-	r.Use(func(ctx *gin.Context) {
-		ctx.Set("keycache", keycache)
-		ctx.Next()
-	})
+	r.POST("/auth", authHandler.Handler)
+	r.Use(authHandler.BearerMiddleware)
 
-	// registering auth variables
+	Posts := handlers.PageHandler{
+		Router: r.Group("/posts"),
+		DB: db,
+		PageType: models.TypePostPage,
+		Collection: string(models.TypePostPage),
+	}
 
-	r.Use(func(ctx *gin.Context) {
-		ctx.Set("otp_crypt", conf.Admin.Pass)
-		ctx.Set("Authenticated", false)
-		ctx.Next()
-	})
+	Posts.RegisterRoutes()
 
-	r.POST("/auth", auth.AuthenticateHandler)
-	r.Use(auth.BearerMiddleware)
+	// Note: the view should render custom pages in a nav.
+	Pages := handlers.PageHandler{
+		Router: r.Group("/pages"),
+		DB: db,
+		PageType: models.TypeGenericPage,
+		Collection: string(models.TypeGenericPage),
+	}
 
-	handlers.RegisterPostRoutes(r.Group("/posts"))
-	handlers.RegisterProjectRoutes(r.Group("/projects"))
-	handlers.RegisterCustomPageRoutes(r.Group("/custom-page"))
-	handlers.RegisterHLRoutes(r.Group("/highlights"))
-	handlers.RegisterCVRoutes(r.Group("/cv"))
+	Pages.RegisterRoutes()
+
+	// TODO: set capped collection
+	CV := handlers.PageHandler{
+		Router: r.Group("/cv"),
+		DB: db,
+		PageType: models.TypeCVPage,
+		Collection: string(models.TypeCVPage),
+	}
+
+	CV.RegisterRoutes()
+
+	Projects := handlers.ReferenceHandler{
+		Router: r.Group("/projects"),
+		DB: db,
+		ReferenceType: models.TypeProjectRef,
+		Collection: string(models.TypeProjectRef),
+	}
+
+	Projects.RegisterRoutes()
+
+	Highlights := handlers.ReferenceHandler{
+		Router: r.Group("/highlights"),
+		DB: db,
+		ReferenceType: models.TypeHighlightRef,
+		Collection: string(models.TypeHighlightRef),
+	}
+
+	Highlights.RegisterRoutes()
+
+	// http server
+
+	srv := &http.Server{
+		Addr: conf.Web.Port,
+		Handler: r,
+		ReadTimeout: 5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+	}
 
 	// bon voyage
-	log.Fatal(r.Run(conf.Web.Port))
+	log.Fatal(srv.ListenAndServe())
 }
