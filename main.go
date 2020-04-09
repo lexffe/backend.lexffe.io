@@ -99,8 +99,8 @@ func main() {
 	// registering authentication routes
 
 	authHandler := auth.AuthenticateHandler{
-		DB: db,
-		Cache: keycache,
+		DB:         db,
+		Cache:      keycache,
 		Collection: "auth",
 	}
 
@@ -113,9 +113,9 @@ func main() {
 	r.Use(authHandler.BearerMiddleware)
 
 	Posts := handlers.PageHandler{
-		Router: r.Group("/posts"),
-		DB: db,
-		PageType: models.TypePostPage,
+		Router:     r.Group("/posts"),
+		DB:         db,
+		PageType:   models.TypePostPage,
 		Collection: string(models.TypePostPage),
 	}
 
@@ -123,9 +123,9 @@ func main() {
 
 	// Note: the view should render custom pages in a nav.
 	Pages := handlers.PageHandler{
-		Router: r.Group("/pages"),
-		DB: db,
-		PageType: models.TypeGenericPage,
+		Router:     r.Group("/pages"),
+		DB:         db,
+		PageType:   models.TypeGenericPage,
 		Collection: string(models.TypeGenericPage),
 	}
 
@@ -133,38 +133,42 @@ func main() {
 
 	// TODO: set capped collection
 	CV := handlers.PageHandler{
-		Router: r.Group("/cv"),
-		DB: db,
-		PageType: models.TypeCVPage,
+		Router:     r.Group("/cv"),
+		DB:         db,
+		PageType:   models.TypeCVPage,
 		Collection: string(models.TypeCVPage),
 	}
 
 	CV.RegisterRoutes()
 
 	Projects := handlers.ReferenceHandler{
-		Router: r.Group("/projects"),
-		DB: db,
+		Router:        r.Group("/projects"),
+		DB:            db,
 		ReferenceType: models.TypeProjectRef,
-		Collection: string(models.TypeProjectRef),
+		Collection:    string(models.TypeProjectRef),
 	}
 
 	Projects.RegisterRoutes()
 
 	Highlights := handlers.ReferenceHandler{
-		Router: r.Group("/highlights"),
-		DB: db,
+		Router:        r.Group("/highlights"),
+		DB:            db,
 		ReferenceType: models.TypeHighlightRef,
-		Collection: string(models.TypeHighlightRef),
+		Collection:    string(models.TypeHighlightRef),
 	}
 
 	Highlights.RegisterRoutes()
 
+	r.GET("/", func(ctx *gin.Context) {
+		ctx.String(http.StatusOK, "Alive")
+	})
+
 	// http server
 
 	srv := &http.Server{
-		Addr: conf.Web.Port,
-		Handler: r,
-		ReadTimeout: 5 * time.Second,
+		Addr:         conf.Web.Port,
+		Handler:      r,
+		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 	}
 
