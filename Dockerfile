@@ -1,4 +1,6 @@
-FROM golang:alpine
+# linux/amd64 musl-libc
+
+FROM golang:alpine as compile
 
 RUN mkdir /app
 ADD . /app
@@ -6,7 +8,23 @@ WORKDIR /app
 
 RUN go mod download
 
-RUN go build -o main .
+RUN GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o main .
+
+FROM alpine:latest as packer
+
+RUN apk add --no-cache upx
+RUN mkdir /app
+WORKDIR /app
+
+COPY --from=compile /app/main .
+
+RUN upx --ultra-brute --best main
+
+FROM busybox:musl
+
+RUN mkdir /app
+WORKDIR /app
+COPY --from=packer /app/main .
 
 EXPOSE 8080
 
