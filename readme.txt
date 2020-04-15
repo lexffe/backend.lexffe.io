@@ -1,13 +1,7 @@
 This repo is the backend for lexffe.io
 
-roadmap
+roadmap for v3:
 
-v2:
-
-- generalise all models
-- collections based on the route
-- (content management system?)
-
-v3:
-
+- tags
 - multimedia assets
+- (content management system?)

@@ -10,6 +10,7 @@ import (
 	// "os"
 	// "flag"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/lexffe/backend.lexffe.io/auth"
 	"github.com/lexffe/backend.lexffe.io/handlers"
@@ -95,6 +96,10 @@ func main() {
 	}
 
 	r := gin.Default()
+
+	// CORS
+
+	r.Use(cors.Default())
 
 	// registering authentication routes
 

@@ -42,11 +42,18 @@ func (s *PageHandler) getPagesHandler(ctx *gin.Context) {
 	skipParam := ctx.DefaultQuery("skip", "0")
 	skip, err := strconv.Atoi(skipParam)
 
-	// TODO: add query parameter for SimplifiedProjection to reduce return document size
-
 	// Bad request
 	if err != nil {
 		ctx.AbortWithError(http.StatusBadRequest, errors.New("skip is not a number"))
+		ctx.Error(err)
+		return
+	}
+
+	simpleParam := ctx.DefaultQuery("simple", "false")
+	simple, err := strconv.ParseBool(simpleParam)
+
+	if err != nil {
+		ctx.AbortWithError(http.StatusBadRequest, errors.New("simple is not a boolean"))
 		ctx.Error(err)
 		return
 	}
@@ -65,6 +72,18 @@ func (s *PageHandler) getPagesHandler(ctx *gin.Context) {
 		SetLimit(paginationLimit).
 		SetSkip(int64(skip))
 		// .SetProjection
+
+	if simple == true {
+		opts.SetProjection(bson.M{
+			"title":            true,
+			"searchable_title": true,
+			"tags":             true,
+			"subtitle":         true,
+			"page_type":        true,
+			"published":        true,
+			"last_updated":     true,
+		})
+	}
 
 	cur, err := s.DB.Collection(s.Collection).Find(ctx.Request.Context(), filter, opts)
 	defer cur.Close(ctx.Request.Context())
@@ -94,6 +113,11 @@ func (s *PageHandler) getPagesHandler(ctx *gin.Context) {
 		// 	break
 		// }
 
+	}
+
+	if len(results) == 0 {
+		ctx.Status(http.StatusNotFound)
+		return
 	}
 
 	ctx.JSON(http.StatusOK, results)

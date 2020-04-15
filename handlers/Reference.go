@@ -84,6 +84,11 @@ func (s *ReferenceHandler) getReferencesHandler(ctx *gin.Context) {
 		references = append(references, reference)
 	}
 
+	if len(references) == 0 {
+		ctx.Status(http.StatusNotFound)
+		return
+	}
+
 	ctx.JSON(http.StatusOK, references)
 }
 
