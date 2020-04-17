@@ -8,7 +8,7 @@ import (
 
 // CheckAuthentication guards admin routes.
 func CheckAuthentication(ctx *gin.Context) {
-	if ctx.MustGet("Authentication").(bool) == true {
+	if ctx.MustGet("Authorized").(bool) == true {
 		ctx.Next()
 		return
 	}

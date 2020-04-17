@@ -17,7 +17,7 @@ func (s *AuthenticateHandler) BearerMiddleware(ctx *gin.Context) {
 	// Yes header + valid key,
 	// Yes header + invalid key
 
-	ctx.Set("Authenticated", false)
+	ctx.Set("Authorized", false)
 
 	authHeader := ctx.GetHeader("Authorization")
 
@@ -47,7 +47,7 @@ func (s *AuthenticateHandler) BearerMiddleware(ctx *gin.Context) {
 
 			// valid key
 			if val.([]string)[i] == key[1] {
-				ctx.Set("Authenticated", true)
+				ctx.Set("Authorized", true)
 				ctx.Next()
 				return
 			}
