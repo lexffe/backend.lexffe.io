@@ -48,13 +48,25 @@ func (s *ReferenceHandler) getReferencesHandler(ctx *gin.Context) {
 		return
 	}
 
+	// get length of the collection (for pagination)
+
+	count, err := s.DB.Collection(s.Collection).CountDocuments(ctx.Request.Context(), bson.M{})
+
+	if err != nil {
+		ctx.AbortWithError(http.StatusInternalServerError, errors.New("cannot count number of documents in collection"))
+		ctx.Error(err)
+		return
+	}
+
+	ctx.Header("X-Collection-Length", strconv.FormatInt(count, 10))
+
 	// only get the published posts
 	filter := bson.M{
 		"published": true,
 	}
 
 	// if user is authenticated, get the drafts as well. i.e. no filter
-	if ctx.MustGet("Authenticated").(bool) == true {
+	if ctx.MustGet("Authorized").(bool) == true {
 		delete(filter, "published")
 	}
 

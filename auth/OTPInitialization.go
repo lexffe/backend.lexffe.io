@@ -41,7 +41,7 @@ func (s *AuthenticateHandler) OTPInitialization(ctx context.Context) error {
 
 			log.Printf("new totp key: %v\n", totpKey.String())
 
-			auth.OTPKey = totpKey.String()
+			auth.OTPKey = totpKey.Secret()
 
 			// insert model into database
 

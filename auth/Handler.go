@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lexffe/backend.lexffe.io/helpers"
 	"github.com/patrickmn/go-cache"
+	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -47,7 +48,19 @@ func (s *AuthenticateHandler) Handler(ctx *gin.Context) {
 		return
 	}
 
-	if validated := totp.Validate(authInfo.OTPToken, authData.OTPKey); validated == true { // authenticated.
+	totpOpts := totp.ValidateOpts{
+		Digits:    otp.DigitsEight,
+		Algorithm: otp.AlgorithmSHA512,
+	}
+
+	validated, err := totp.ValidateCustom(authInfo.OTPToken, authData.OTPKey, time.Now(), totpOpts)
+
+	if err != nil {
+		ctx.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	if validated == true { // authenticated.
 		// generate apikey subroutine
 
 		apiKey, err := helpers.HexStringGen(8)
@@ -71,7 +84,9 @@ func (s *AuthenticateHandler) Handler(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
 			"api_key": apiKey,
 		})
+		return
 	}
 
 	ctx.AbortWithStatus(http.StatusUnauthorized)
+	return
 }

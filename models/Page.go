@@ -29,16 +29,16 @@ type Page struct {
 	Subtitle string `json:"subtitle" bson:"subtitle"`
 
 	// PageType denotes the type of this page
-	PageType ObjectType `json:"page_type" bson:"page_type"`
+	PageType ObjectType `json:"page_type,omitempty" bson:"page_type"`
 
 	// Markdown is the markdown template of the post.
-	Markdown string `json:"markdown" bson:"markdown" binding:"required"`
+	Markdown string `json:"markdown,omitempty" bson:"markdown" binding:"required"`
 
 	/*
 		HTML is a generated field from the markdown template.
 		It is used for rendering the blog post itself. (.innerHTML)
 	*/
-	HTML string `json:"html" bson:"html"` // Generated Field
+	HTML string `json:"html,omitempty" bson:"html"` // Generated Field
 
 	// Published is a flag for publisher to withhold the post (drafting).
 	Published bool `json:"published" bson:"published" binding:"required"`

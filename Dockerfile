@@ -17,6 +17,7 @@ RUN mkdir /app
 WORKDIR /app
 
 COPY --from=compile /app/main .
+COPY --from=compile /app/config.toml .
 
 RUN upx --ultra-brute --best main
 
@@ -25,6 +26,7 @@ FROM busybox:musl
 RUN mkdir /app
 WORKDIR /app
 COPY --from=packer /app/main .
+COPY --from=compile /app/config.toml .
 
 EXPOSE 8080
 
