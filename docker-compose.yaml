@@ -1,0 +1,12 @@
+version: 3.0
+services: 
+  backend:
+    build: .
+    ports: 
+      - "8080:8080"
+  database:
+    image: mongo
+
+volumes:
+
+networks:

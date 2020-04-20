@@ -7,6 +7,3 @@ pass = ""
 [web]
 prod = true
 port = ":8080"
-
-[admin]
-pass = "hunter2"
