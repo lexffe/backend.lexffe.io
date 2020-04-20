@@ -45,4 +45,6 @@ type Page struct {
 
 	// LastUpdated is a timestamp indicating when the document was last edited.
 	LastUpdated time.Time `json:"last_updated" bson:"last_updated"`
+
+	Updated bool `json:"updated" bson:"updated"`
 }

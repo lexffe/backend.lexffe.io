@@ -13,3 +13,5 @@
 
 config.toml
 doc/spec-doc
+
+.vscode

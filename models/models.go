@@ -2,7 +2,7 @@ package models
 
 type ObjectType string
 type AssetType string
-type ReferenceSource string
+
 
 const (
 	TypeGenericPage ObjectType = "generic_page"

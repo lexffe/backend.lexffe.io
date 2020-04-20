@@ -60,22 +60,12 @@ func (s *ReferenceHandler) getReferencesHandler(ctx *gin.Context) {
 
 	ctx.Header("X-Collection-Length", strconv.FormatInt(count, 10))
 
-	// only get the published posts
-	filter := bson.M{
-		"published": true,
-	}
-
-	// if user is authenticated, get the drafts as well. i.e. no filter
-	if ctx.MustGet("Authorized").(bool) == true {
-		delete(filter, "published")
-	}
-
 	opts := options.Find().
 		SetLimit(paginationLimit).
 		SetSkip(int64(skip))
 		// .SetProjection
 
-	cur, err := s.DB.Collection(s.Collection).Find(ctx.Request.Context(), filter, opts)
+	cur, err := s.DB.Collection(s.Collection).Find(ctx.Request.Context(), bson.M{}, opts)
 	defer cur.Close(ctx.Request.Context())
 
 	// mongo related error
@@ -97,7 +87,7 @@ func (s *ReferenceHandler) getReferencesHandler(ctx *gin.Context) {
 	}
 
 	if len(references) == 0 {
-		ctx.Status(http.StatusNotFound)
+		ctx.JSON(http.StatusOK, []int{}) // return empty slice
 		return
 	}
 

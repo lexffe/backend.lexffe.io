@@ -86,6 +86,7 @@ func (s *PageHandler) getPagesHandler(ctx *gin.Context) {
 		"html":             true,
 		"published":        true,
 		"last_updated":     true,
+		"updated":          true,
 	}
 
 	// if user is authenticated, get the drafts as well. i.e. no filter
@@ -135,7 +136,7 @@ func (s *PageHandler) getPagesHandler(ctx *gin.Context) {
 	}
 
 	if len(results) == 0 {
-		ctx.Status(http.StatusNotFound)
+		ctx.JSON(http.StatusOK, []int{}) // return empty slice
 		return
 	}
 
@@ -247,6 +248,7 @@ func (s *PageHandler) createPageHandler(ctx *gin.Context) {
 	// create only: set page type
 	body.PageType = s.PageType
 	body.LastUpdated = time.Now()
+	body.Updated = false
 
 	// database operation
 
@@ -306,6 +308,7 @@ func (s *PageHandler) updatePageHandler(ctx *gin.Context) {
 	body.HTML = html
 
 	body.LastUpdated = time.Now()
+	body.Updated = true
 
 	filter := bson.M{
 		"_id": body.ObjectID,
