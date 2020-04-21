@@ -79,7 +79,7 @@ func (s *AuthenticateHandler) Handler(ctx *gin.Context) {
 			s.Cache.Set("keys", nval, cache.DefaultExpiration)
 		}
 
-		ctx.Header("Expires", time.Now().Add(1*time.Hour).String())
+		ctx.Header("Expires", time.Now().Add(1*time.Hour).Format(time.RFC3339))
 
 		ctx.JSON(http.StatusOK, gin.H{
 			"api_key": apiKey,
