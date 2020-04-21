@@ -1,9 +1,15 @@
+[meta]
+appname = "backend" # used for identifying the application in mongo
+
 [mongo]
-addr = "mongodb://localhost:27017"
+addr = "mongodb://localhost:27017" # address to mongodb, can either be mongodb / unix socket
 database = "test"
-user = ""
-pass = ""
+auth = true # if true, the following user/pass combo will be used for connection
+user = "" # mongodb username
+pass = "" # mongodb password
 
 [web]
-prod = true
-port = ":8080"
+tcp = true # if false, app will only listen with unix socket
+unixpath = "/tmp/backend.sock" # path to create unix socket file
+prod = true # production
+port = ":8080" # http port, ignored if unix is true

@@ -4,11 +4,9 @@ import (
 	"context"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"time"
-
-	// "os"
-	// "flag"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -21,16 +19,20 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const appName = "backend"
-
-type config struct {
+type appConfig struct {
+	Meta struct {
+		AppName string `toml:"appname"`
+	}
 	Mongo struct {
-		Addr     string
+		Addr     string 
 		Database string
+		Auth     bool
 		User     string
 		Pass     string
 	}
 	Web struct {
+		TCP bool
+		UnixPath string `toml:"unixpath"`
 		Prod bool
 		Port string
 	}
@@ -56,17 +58,21 @@ func main() {
 
 	// Config: parse config
 
-	var conf config
+	var conf appConfig
 	if err = toml.Unmarshal(confContent, &conf); err != nil {
 		log.Fatal(err)
 	}
 	// Database: connection initialisation
 
-	mongoOpts := options.Client().ApplyURI(conf.Mongo.Addr).SetAuth(options.Credential{
-		AuthMechanism: "SCRAM-SHA-256",
-		Username:      conf.Mongo.User,
-		Password:      conf.Mongo.Pass,
-	}).SetAppName(appName)
+	mongoOpts := options.Client().ApplyURI(conf.Mongo.Addr).SetAppName(conf.Meta.AppName)
+
+	if conf.Mongo.Auth == true {
+		mongoOpts.SetAuth(options.Credential{
+			AuthMechanism: "SCRAM-SHA-256",
+			Username:      conf.Mongo.User,
+			Password:      conf.Mongo.Pass,
+		})
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	client, err := mongo.Connect(ctx, mongoOpts)
@@ -177,6 +183,32 @@ func main() {
 		WriteTimeout: 5 * time.Second,
 	}
 
+	// unix?
+
+	if conf.Web.TCP == true {
+		// new goroutine to serve the http server
+		
+		tcpListener, err := net.Listen("tcp", conf.Web.Port)
+		
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		defer tcpListener.Close()
+
+		go func(l *net.Listener) {
+			log.Fatal(srv.Serve(*l))
+		}(&tcpListener)
+	}
+
+	unixListener, err := net.Listen("unix", conf.Web.UnixPath)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	defer unixListener.Close()
+
 	// bon voyage
-	log.Fatal(srv.ListenAndServe())
+	log.Fatal(srv.Serve(unixListener))
 }

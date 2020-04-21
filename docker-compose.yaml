@@ -1,4 +1,5 @@
-version: 3.0
+# TODO: unix socket mongo
+version: 3.7
 services: 
   backend:
     build: .
