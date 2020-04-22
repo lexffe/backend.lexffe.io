@@ -1,0 +1,47 @@
+version: '3.7'
+
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports: 
+      - "8080:8080"
+    networks: 
+      - haproxy-net
+    volumes:
+      - type: volume
+        source: mongodb-sock
+        target: /tmp/mongo-vol
+        consistency: consistent
+      - ./config.toml:/app/config.toml
+      - app-sock:/tmp/socket/
+    depends_on:
+      - database
+    command: sh -c 'sleep 5 && /app/main'
+
+  database:
+    image: mongo
+    volumes:
+      - mongodb:/data/db
+      - type: volume
+        source: mongodb-sock
+        target: /tmp/
+        consistency: consistent
+    restart: always
+    network_mode: "none"
+    environment: 
+      - MONGO_INITDB_ROOT_USERNAME=
+      - MONGO_INITDB_ROOT_PASSWORD=
+
+volumes:
+  app-sock: {}
+  mongodb: {}
+  mongodb-sock: {}
+
+networks:
+  haproxy-net:
+    name: haproxy-net
+    external: true
+    internal: true

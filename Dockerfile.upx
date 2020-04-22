@@ -12,11 +12,21 @@ RUN go mod download
 
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags='-s -w -linkmode external -extldflags "-fno-PIC -static"' -buildmode pie -tags 'osusergo netgo static_build' -o main .
 
+FROM alpine:latest as packer
+
+RUN apk add --no-cache upx
+RUN mkdir /app
+WORKDIR /app
+
+COPY --from=compile /app/main .
+
+RUN upx --ultra-brute --best main
+
 FROM busybox:musl
 
 RUN mkdir /app
 WORKDIR /app
-COPY --from=compile /app/main .
+COPY --from=packer /app/main .
 
 EXPOSE 8080
 

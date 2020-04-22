@@ -6,6 +6,9 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -24,17 +27,17 @@ type appConfig struct {
 		AppName string `toml:"appname"`
 	}
 	Mongo struct {
-		Addr     string 
+		Addr     string
 		Database string
 		Auth     bool
 		User     string
 		Pass     string
 	}
 	Web struct {
-		TCP bool
+		TCP      bool
 		UnixPath string `toml:"unixpath"`
-		Prod bool
-		Port string
+		Prod     bool
+		Port     string
 	}
 }
 
@@ -53,6 +56,7 @@ func main() {
 
 	confContent, err := ioutil.ReadFile("config.toml")
 	if err != nil {
+		log.Println("Cannot read configuration file.")
 		log.Fatal(err)
 	}
 
@@ -60,6 +64,7 @@ func main() {
 
 	var conf appConfig
 	if err = toml.Unmarshal(confContent, &conf); err != nil {
+		log.Println("Cannot unmarshal configuration file.")
 		log.Fatal(err)
 	}
 	// Database: connection initialisation
@@ -183,14 +188,18 @@ func main() {
 		WriteTimeout: 5 * time.Second,
 	}
 
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
 	// unix?
 
 	if conf.Web.TCP == true {
 		// new goroutine to serve the http server
-		
+
 		tcpListener, err := net.Listen("tcp", conf.Web.Port)
-		
+
 		if err != nil {
+			log.Println("Cannot listen on tcp socket")
 			log.Fatal(err)
 		}
 
@@ -201,13 +210,30 @@ func main() {
 		}(&tcpListener)
 	}
 
-	unixListener, err := net.Listen("unix", conf.Web.UnixPath)
+	unixListener, err := net.ListenUnix("unix", &net.UnixAddr{
+		Name: conf.Web.UnixPath,
+		Net: "unix",
+	})
+
+	// special routine for cleaning up unix socket
+
+	unixListener.SetUnlinkOnClose(true)
 
 	if err != nil {
+		log.Println("Cannot listen on unix socket")
 		log.Fatal(err)
 	}
-	
-	defer unixListener.Close()
+
+	go func() {
+		for sig := range c {
+			log.Printf("signal detected: %v, cleaning up unix.", sig)
+			if err := unixListener.Close(); err != nil {
+				log.Println("unix dirty close")
+				os.Exit(1)
+			}
+			os.Exit(0)
+		}
+	}()
 
 	// bon voyage
 	log.Fatal(srv.Serve(unixListener))

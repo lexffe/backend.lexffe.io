@@ -1,17 +1,13 @@
 .DS_Store
-
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-
 *.test
-
 *.out
 
+doc
 config.toml
-doc/spec-doc
-
+docker-compose.yaml
 .vscode
