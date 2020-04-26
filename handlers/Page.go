@@ -89,6 +89,10 @@ func (s *PageHandler) getPagesHandler(ctx *gin.Context) {
 		"updated":          true,
 	}
 
+	if simple == true {
+		delete(projection, "html")
+	}
+
 	// if user is authenticated, get the drafts as well. i.e. no filter
 	if ctx.MustGet("Authorized").(bool) == true {
 		delete(filter, "published")
@@ -96,14 +100,11 @@ func (s *PageHandler) getPagesHandler(ctx *gin.Context) {
 
 	opts := options.Find().
 		SetLimit(paginationLimit).
-		SetSkip(int64(skip))
-		// .SetProjection
-
-	if simple == true {
-		delete(projection, "html")
-	}
-
-	opts.SetProjection(projection)
+		SetSkip(int64(skip)).
+		SetProjection(projection).
+		SetSort(bson.M{
+			"_id": -1,
+		})
 
 	cur, err := s.DB.Collection(s.Collection).Find(ctx.Request.Context(), filter, opts)
 	defer cur.Close(ctx.Request.Context())

@@ -62,7 +62,10 @@ func (s *ReferenceHandler) getReferencesHandler(ctx *gin.Context) {
 
 	opts := options.Find().
 		SetLimit(paginationLimit).
-		SetSkip(int64(skip))
+		SetSkip(int64(skip)).
+		SetSort(bson.M{
+			"_id": -1,
+		})
 		// .SetProjection
 
 	cur, err := s.DB.Collection(s.Collection).Find(ctx.Request.Context(), bson.M{}, opts)
