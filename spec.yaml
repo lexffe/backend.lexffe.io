@@ -6,19 +6,17 @@ info:
 servers:
 - url: https://backend.lexffe.io
 tags:
-- name: Posts
-- name: Projects
-- name: Custom-Pages
-- name: Highlights
-- name: CV
+- name: Pages
+- name: References
+- name: Collections
 paths:
   
   /posts:
     
     get:
       tags:
-        - Posts
-      summary: Gets all the published blog posts.
+        - Pages
+      summary: Gets all pages in a given collection.
       description: '
         (Note: if client is authenticated i.e. admin, "published" == false will be retrieved as well.)
       '
