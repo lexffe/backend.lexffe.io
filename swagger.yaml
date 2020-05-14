@@ -1,0 +1,604 @@
+openapi: 3.0.1
+info:
+  version: 1.0.0
+  title: Backend API
+  description: The set of API used for backend.lexffe.io. 
+servers:
+  - url: https://backend.lexffe.io
+tags:
+  - name: Pages
+  - name: References
+  - name: Collections
+  - name: Meta
+paths:
+  
+  /:
+    get:
+      tags: [Meta]
+      summary: Check if the server is alive.
+      responses:
+        200:
+          description: Successful response is the string "Alive".
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Alive"
+
+  /auth:
+    post:
+      tags: [Meta]
+      summary: Retrieve API token for admin paths.
+      requestBody:
+        description: "The OTP generated from the authenticator application.
+          Note that the OTP secret is generated from the server when the server first starts."
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+              example: 44175014
+              pattern: '^\d{8}$'
+      responses:
+        401:
+          description: Invalid / wrong code.
+        200:
+          description: Successful response is a generated API token, valid for 2 hours.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: fba1414d3c451104
+                pattern: '^[0-9a-f]{16}$'
+
+  /coll/:
+    get:
+      tags: [Collections]
+      summary: Gets the complete list of collections
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                    type:
+                      $ref: "#/components/schemas/ObjectType"
+      security:
+        - api_key: []
+    post:
+      tags: [Collections]
+      summary: Create a new collection.
+      requestBody:
+        description: The name and type of the collection.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  description: "Name of the collection"
+                  type: string
+                type:
+                  $ref: "#/components/schemas/ObjectType"
+      responses:
+        409:
+          description: "collection name is in conflict with either router internal routes / existing collections"
+        201:
+          $ref: "#/components/responses/Created"
+        400:
+          $ref: "#/components/responses/MalformedReq"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+      security:
+        - api_key: []
+
+  /coll/{collectionName}/:
+
+    delete:
+      tags: [Collections]
+      summary: Delete a collection.
+      parameters:
+        - name: collectionName
+          in: path
+          description: The name of the collection.
+          required: true
+          schema:
+            type: string
+      responses:
+        400:
+          $ref: "#/components/responses/MalformedReq"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFound"
+        204:
+          $ref: "#/components/responses/NoContent"
+      security:
+        - api_key: []
+  
+  # pages
+  /{pageCollection}/:
+    get:
+      tags: [Pages]
+      summary: Get all pages in a collection.
+      description: "
+      - query callback documents are sorted by `_id` in descending order (newest first)
+      
+      - field `markdown` will not be visible
+      
+      - if unauthenticated, only `published: true` documents are returned.
+      "
+      parameters:
+        - name: pageCollection
+          in: path
+          description: The name of the page collection.
+          required: true
+          schema:
+            type: string
+        - name: skip
+          in: query
+          description: Number of documents to skip.
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          description: Limiting the number of documents to return.
+          schema:
+            type: integer
+            default: 0
+        - name: simple
+          in: query
+          description: Simple projection, removes the `html` field.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        400:
+          $ref: "#/components/responses/MalformedReq"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        200:
+          description: OK
+          headers:
+            X-Collection-Length:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Page"
+      security:
+        - none: []
+        - api_key: []
+  
+    post:
+      tags: [Pages]
+      summary: Create a new page
+      parameters:
+        - name: pageCollection
+          in: path
+          description: The name of the page collection.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: "The page to be created. (body is a subset of schema Page)"
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Page"
+      responses:
+        409:
+          description: "page with the same title exists."
+        201:
+          $ref: "#/components/responses/Created"
+        400:
+          $ref: "#/components/responses/MalformedReq"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+      security:
+        - api_key: []
+        
+  /{pageCollection}/{id}/:
+    get:
+      tags: [Pages]
+      summary: Get a single page.
+      description: "
+      If unauthenticated,
+      
+      - the markdown field will not be shown.
+      
+      - only published pages are returned.
+      "
+      parameters:
+        - name: pageCollection
+          in: path
+          description: The name of the page collection.
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: The identifier of the page. Could be either the document id, or the searchable title.
+          required: true
+          schema:
+            type: string
+        - name: obj_id
+          in: query
+          description: Indicate whether the id is a document id or a searchable title.
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        400:
+          $ref: "#/components/responses/MalformedReq"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFound"
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Page"
+      security:
+        - none: []
+        - api_key: []
+    put:
+      tags: [Pages]
+      summary: Update a single page.
+      description: "- This replaces the entire document with the request content."
+      parameters:
+        - name: pageCollection
+          in: path
+          description: The name of the page collection.
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: The identifier of the page. Must be ObjectId.
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-f]{24}$'
+      requestBody:
+        description: The modified document.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Page"
+      responses:
+        400:
+          $ref: "#/components/responses/MalformedReq"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFound"
+        204:
+          description: Update success.
+      security:
+        - api_key: []
+    delete:
+      tags: [Pages]
+      summary: Delete a single page.
+      parameters:
+        - name: pageCollection
+          in: path
+          description: The name of the page collection.
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: The identifier of the page. Must be ObjectId.
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-f]{24}$'
+      responses:
+        400:
+          $ref: "#/components/responses/MalformedReq"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFound"
+        204:
+          description: Delete success.
+      security:
+        - api_key: []
+        
+
+  # references
+  /{referenceCollection}/:
+    get:
+      tags: [References]
+      summary: Get all references in a collection.
+      description: "
+      - query callback documents are sorted by `_id` in descending order (newest first)
+      "
+      parameters:
+        - name: referenceCollection
+          in: path
+          description: The name of the reference collection.
+          required: true
+          schema:
+            type: string
+        - name: skip
+          in: query
+          description: Number of documents to skip.
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          description: Limiting the number of documents to return.
+          schema:
+            type: integer
+            default: 0
+      responses:
+        400:
+          $ref: "#/components/responses/MalformedReq"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        200:
+          description: OK
+          headers:
+            X-Collection-Length:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reference"
+      security:
+        - none: []
+        - api_key: []
+  
+    post:
+      tags: [References]
+      summary: Create a new reference.
+      parameters:
+        - name: referenceCollection
+          in: path
+          description: The name of the reference collection.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: "The reference to be created. (body is a subset of schema Reference)"
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Reference"
+      responses:
+        201:
+          $ref: "#/components/responses/Created"
+        400:
+          $ref: "#/components/responses/MalformedReq"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+      security:
+        - api_key: []
+      
+  /{referenceCollection}/{id}/:
+    get:
+      tags: [References]
+      summary: Get a single reference.
+      parameters:
+        - name: referenceCollectionName
+          in: path
+          description: The name of the reference collection.
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: The identifier of the reference. Must be ObjectId
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-f]{24}$'
+      responses:
+        400:
+          $ref: "#/components/responses/MalformedReq"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFound"
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reference"
+      security:
+        - none: []
+        - api_key: []
+    
+    put:
+      tags: [References]
+      summary: Update a single reference.
+      description: "- This replaces the entire document with the request content."
+      parameters:
+        - name: referenceCollectionName
+          in: path
+          description: The name of the reference collection.
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: The identifier of the reference. Must be ObjectId.
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-f]{24}$'
+      requestBody:
+        description: The modified document.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Reference"
+      responses:
+        400:
+          $ref: "#/components/responses/MalformedReq"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFound"
+        204:
+          description: Update success.
+      security:
+        - api_key: []
+      
+    delete:
+      tags: [References]
+      summary: Delete a single reference.
+      parameters:
+        - name: referenceCollectionName
+          in: path
+          description: The name of the reference collection.
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: The identifier of the reference. Must be ObjectId.
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-f]{24}$'
+      responses:
+        400:
+          $ref: "#/components/responses/MalformedReq"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        404:
+          $ref: "#/components/responses/NotFound"
+        204:
+          description: Delete success.
+      security:
+        - api_key: []
+
+
+components:
+  responses:
+    UnauthorizedError:
+      description: Unauthorised. (Your token is either invalid, or you did not provide one if the route is private.)
+    MalformedReq:
+      description: Malformed request. (Usually - JSON request body cannot be binded to model.)
+    Created:
+      description: Object created.
+    NotFound:
+      description: The entity you have specified does not exist.
+    NoContent:
+      description: Successful, with no response.
+  
+  schemas:
+
+    ObjectType:
+      type: string
+      enum: [page, reference]
+
+    Page:
+      type: object
+      required:
+        - title
+        - subtitle
+        - tags
+        - markdown
+        - published
+      properties:
+        _id:
+          type: string
+          description: automatically generated
+          pattern: '^[0-9a-f]{24}$'
+        title:
+          type: string
+        searchable_title:
+          type: string
+          description: automatically generated
+        tags:
+          type: array
+          items:
+            type: string
+        subtitle:
+          type: string
+        page_type:
+#           $ref: "#/components/schemas/ObjectType"
+          type: string
+          enum: [page]
+          description: constantly "page". automatically generated
+        markdown:
+          type: string
+        html:
+          type: string
+          description: automatically generated
+        published:
+          type: boolean
+        last_updated:
+          type: string
+          format: date-time
+          description: RFC3339, automatically generated
+        updated:
+          type: boolean
+          description: automatically generated
+    Reference:
+      type: object
+      required:
+        - name
+        - description
+        - reference_source
+      properties:
+        _id:
+          type: string
+          description: automatically generated
+          pattern: '^[0-9a-f]{24}$'
+        name:
+          type: string
+        description:
+          type: string
+        reference_source:
+          type: string
+        reference_type:
+          type: string
+          enum: [reference]
+          description: constantly "reference". automatically generated
+        external:
+          type: boolean
+        collection:
+          description: The collection this reference is pointing at
+          type: string
+        internal_id:
+          description: The ObjectId this reference is pointing at
+          type: string
+          pattern: '^[0-9a-f]{24}$'
+        url:
+          description: 
+          type: string
+          format: uri
+                    
+
+  securitySchemes:
+    api_key:
+      type: http
+      scheme: bearer

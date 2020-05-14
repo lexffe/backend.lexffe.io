@@ -31,7 +31,6 @@ func (s *ReferenceHandler) RegisterRoutes() {
 
 	protected.POST("/", s.createReferenceHandler)
 	protected.PUT("/:id", s.updateReferenceHandler)
-	protected.PATCH("/", s.resetReferenceHandler)
 	protected.DELETE("/:id", s.deleteReferenceHandler)
 }
 
@@ -39,11 +38,21 @@ func (s *ReferenceHandler) getReferencesHandler(ctx *gin.Context) {
 
 	// user-defined skip, for pagination.
 	skipParam := ctx.DefaultQuery("skip", "0")
-	skip, err := strconv.Atoi(skipParam)
-
+	skip, err := strconv.ParseInt(skipParam, 10, 64)
 	// Bad request
 	if err != nil {
 		ctx.AbortWithError(http.StatusBadRequest, errors.New("skip is not a number"))
+		ctx.Error(err)
+		return
+	}
+
+	// user-defined limit, for pagination
+	limitParam := ctx.DefaultQuery("limit", "0")
+	limit, err := strconv.ParseInt(limitParam, 10, 64)
+
+	// Bad request
+	if err != nil {
+		ctx.AbortWithError(http.StatusBadRequest, errors.New("limit is not a number"))
 		ctx.Error(err)
 		return
 	}
@@ -61,14 +70,15 @@ func (s *ReferenceHandler) getReferencesHandler(ctx *gin.Context) {
 	ctx.Header("X-Collection-Length", strconv.FormatInt(count, 10))
 
 	opts := options.Find().
-		SetLimit(paginationLimit).
-		SetSkip(int64(skip)).
+		SetLimit(limit).
+		SetSkip(skip).
 		SetSort(bson.M{
 			"_id": -1,
 		})
 		// .SetProjection
 
 	cur, err := s.DB.Collection(s.Collection).Find(ctx.Request.Context(), bson.M{}, opts)
+	//noinspection ALL
 	defer cur.Close(ctx.Request.Context())
 
 	// mongo related error
@@ -79,18 +89,8 @@ func (s *ReferenceHandler) getReferencesHandler(ctx *gin.Context) {
 
 	var references []models.Reference
 
-	for cur.Next(ctx.Request.Context()) {
-		var reference models.Reference
-
-		if err := cur.Decode(&reference); err != nil {
-			ctx.AbortWithError(http.StatusInternalServerError, err)
-			return
-		}
-		references = append(references, reference)
-	}
-
-	if len(references) == 0 {
-		ctx.JSON(http.StatusOK, []int{}) // return empty slice
+	if err := cur.All(ctx.Request.Context(), &references); err != nil {
+		ctx.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
@@ -208,41 +208,6 @@ func (s *ReferenceHandler) updateReferenceHandler(ctx *gin.Context) {
 
 	if res.MatchedCount == 0 {
 		ctx.Status(http.StatusNotFound)
-		return
-	}
-
-	ctx.Status(http.StatusNoContent)
-}
-
-// resetReferenceHandler bulk writes
-// the
-func (s *ReferenceHandler) resetReferenceHandler(ctx *gin.Context) {
-	var body struct {
-		References []models.Reference `json:"references,dive"`
-	}
-
-	if err := ctx.BindJSON(&body); err != nil {
-		ctx.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-
-	models := []mongo.WriteModel{}
-
-	for _, v := range body.References {
-		models = append(models, mongo.NewInsertOneModel().SetDocument(v))
-	}
-
-	opts := options.BulkWrite().SetOrdered(false)
-
-	res, err := s.DB.Collection(s.Collection).BulkWrite(ctx.Request.Context(), models, opts)
-
-	if err != nil {
-		ctx.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-
-	if int(res.InsertedCount) != len(body.References) {
-		ctx.AbortWithError(http.StatusInternalServerError, errors.New("mismatched insert count"))
 		return
 	}
 

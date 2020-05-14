@@ -11,3 +11,4 @@ doc
 config.toml
 docker-compose.yaml
 .vscode
+.idea

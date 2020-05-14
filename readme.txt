@@ -1,4 +1,4 @@
-This repo is the backend for lexffe.io
+This repo is the backend for lexffe.io.
 
 roadmap for v3:
 

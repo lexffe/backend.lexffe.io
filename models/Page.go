@@ -14,7 +14,7 @@ type Page struct {
 	Title string `json:"title" bson:"title" binding:"required"`
 
 	/*
-		SearchableTitle is a generated field that turns the arbitary title into a kebab-case string
+		SearchableTitle is a generated field that turns the arbitrary title into a kebab-case string
 
 		Note: This field is used for MongoDB indexing.
 
@@ -23,10 +23,10 @@ type Page struct {
 	SearchableTitle string `json:"searchable_title" bson:"searchable_title"` // Generated Field
 
 	// Tags is an array of keywords.
-	Tags []string `json:"tags" bson:"tags"`
+	Tags []string `json:"tags" bson:"tags" binding:"required"`
 
 	// Subtitle is the subtitle/alternative title of the page.
-	Subtitle string `json:"subtitle" bson:"subtitle"`
+	Subtitle string `json:"subtitle" bson:"subtitle" binding:"required"`
 
 	// PageType denotes the type of this page
 	PageType ObjectType `json:"page_type,omitempty" bson:"page_type"`

@@ -6,7 +6,7 @@ import "go.mongodb.org/mongo-driver/bson/primitive"
 type Reference struct {
 	ObjectID           primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
 	Name               string             `json:"name" bson:"name" binding:"required"`
-	Description        string             `json:"description" bson:"description"`
+	Description        string             `json:"description" bson:"description" binding:"required"`
 	ReferenceSource    string             `json:"reference_source" bson:"reference_source" binding:"required"`
 	ReferenceType      ObjectType         `json:"reference_type" bson:"reference_type"`
 	External           bool               `json:"external" bson:"external"`

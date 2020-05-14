@@ -38,13 +38,25 @@ func (s *PageHandler) RegisterRoutes() {
 
 // directory
 func (s *PageHandler) getPagesHandler(ctx *gin.Context) {
+
 	// user-defined skip, for pagination.
 	skipParam := ctx.DefaultQuery("skip", "0")
-	skip, err := strconv.Atoi(skipParam)
+	skip, err := strconv.ParseInt(skipParam, 10, 64)
 
 	// Bad request
 	if err != nil {
 		ctx.AbortWithError(http.StatusBadRequest, errors.New("skip is not a number"))
+		ctx.Error(err)
+		return
+	}
+
+	// user-defined limit, for pagination
+	limitParam := ctx.DefaultQuery("limit", "0")
+	limit, err := strconv.ParseInt(limitParam, 10, 64)
+
+	// Bad request
+	if err != nil {
+		ctx.AbortWithError(http.StatusBadRequest, errors.New("limit is not a number"))
 		ctx.Error(err)
 		return
 	}
@@ -99,14 +111,15 @@ func (s *PageHandler) getPagesHandler(ctx *gin.Context) {
 	}
 
 	opts := options.Find().
-		SetLimit(paginationLimit).
-		SetSkip(int64(skip)).
+		SetLimit(limit).
+		SetSkip(skip).
 		SetProjection(projection).
 		SetSort(bson.M{
 			"_id": -1,
 		})
 
 	cur, err := s.DB.Collection(s.Collection).Find(ctx.Request.Context(), filter, opts)
+	//noinspection GoNilness
 	defer cur.Close(ctx.Request.Context())
 
 	// mongo related error
@@ -117,27 +130,8 @@ func (s *PageHandler) getPagesHandler(ctx *gin.Context) {
 
 	var results []models.Page
 
-	// cursor.Next gets 0th document on first iteration.
-	// i.e. cursor.Decode before first .Next spits out error.
-	for cur.Next(ctx.Request.Context()) {
-
-		var result models.Page
-
-		if err := cur.Decode(&result); err != nil {
-			ctx.AbortWithError(http.StatusInternalServerError, err)
-			return
-		}
-
-		results = append(results, result)
-
-		// if cur.ID() == 0 {
-		// 	break
-		// }
-
-	}
-
-	if len(results) == 0 {
-		ctx.JSON(http.StatusOK, []int{}) // return empty slice
+	if err := cur.All(ctx.Request.Context(), &results); err != nil {
+		ctx.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
@@ -177,18 +171,29 @@ func (s *PageHandler) getPageHandler(ctx *gin.Context) {
 		filter["searchable_title"] = docID
 	}
 
-	// reserved for projection
-	// opts := options.FindOne()
+	opts := options.FindOne().SetProjection(bson.M{
+		"_id":              true,
+		"title":            true,
+		"searchable_title": true,
+		"tags":             true,
+		"subtitle":         true,
+		"page_type":        true,
+		"html":             true,
+		"published":        true,
+		"last_updated":     true,
+		"updated":          true,
+	})
 
 	// if user is authenticated, get the drafts as well. i.e. no filter
 	if ctx.MustGet("Authorized").(bool) == true {
 		delete(filter, "published")
-		// opts.SetProjection(bson.M{})
+		// unset projection
+		opts.SetProjection(bson.M{})
 	}
 
 	// Query
 
-	res := s.DB.Collection(s.Collection).FindOne(ctx.Request.Context(), filter)
+	res := s.DB.Collection(s.Collection).FindOne(ctx.Request.Context(), filter, opts)
 
 	if res.Err() != nil {
 		if res.Err() == mongo.ErrNoDocuments {
@@ -228,7 +233,7 @@ func (s *PageHandler) createPageHandler(ctx *gin.Context) {
 		return
 	}
 
-	// generated fields: { searchable_title, page_type, html, last_updated }
+	// generated fields: { searchable_title }
 
 	stitle, err := helpers.ParseKebab(body.Title)
 	if err != nil {
@@ -237,6 +242,23 @@ func (s *PageHandler) createPageHandler(ctx *gin.Context) {
 		return
 	}
 	body.SearchableTitle = stitle
+
+	n, err := s.DB.Collection(s.Collection).CountDocuments(ctx.Request.Context(), bson.M{
+		"searchable_title": stitle,
+	})
+
+	if err != nil {
+		ctx.AbortWithError(http.StatusInternalServerError, errors.New("check existing document failed"))
+		ctx.Error(err)
+		return
+	}
+
+	if n > 0 {
+		ctx.AbortWithError(http.StatusConflict, errors.New("page with same title exists"))
+		return
+	}
+
+	// generated fields: { page_type, html, last_updated }
 
 	html, err := helpers.ParseMD(body.Markdown)
 	if err != nil {

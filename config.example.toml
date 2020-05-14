@@ -1,10 +1,11 @@
 [meta]
 appname = "backend" # used for identifying the application in mongo
+cors_host = "https://www.google.com"
 
 [mongo]
 addr = "mongodb://localhost:27017" # address to mongodb, can either be mongodb / unix socket
 database = "test"
-auth = true # if true, the following user/pass combo will be used for connection
+auth = true # if true, the following user/pass combo will be used for connection. SCRAM-SHA-256 is used.
 user = "" # mongodb username
 pass = "" # mongodb password
 
