@@ -1,3 +1,7 @@
+Jankiest purpose-built text management "engine" for the lexffe blog.
+
+Should have adopted a proper CMS but this is a good practice too.
+
 This repo is the backend for lexffe.io.
 
 roadmap for v3:
